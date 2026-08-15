@@ -1,0 +1,68 @@
+{
+  "task": "future_content_performance_decline_ranking",
+  "label": "next-month impressions < 80% of previous-month impressions",
+  "feature_window": "previous three consecutive monthly observations",
+  "test_months": [
+    "2026-03-01T00:00:00.000000",
+    "2026-04-01T00:00:00.000000",
+    "2026-05-01T00:00:00.000000"
+  ],
+  "random_seed": 42,
+  "test_base_rate": 0.6512378796082099,
+  "best_model": "logistic_regression",
+  "metrics": [
+    {
+      "model": "logistic_regression",
+      "ROC_AUC": 0.4880013440920703,
+      "PR_AUC": 0.6500617128822561,
+      "Precision@10": 0.9,
+      "Precision@25": 0.92,
+      "Precision@50": 0.82,
+      "Precision@100": 0.8,
+      "Recall@0.5": 0.5081927565149041,
+      "F1@0.5": 0.5675530814907975
+    },
+    {
+      "model": "random_forest",
+      "ROC_AUC": 0.505103345486257,
+      "PR_AUC": 0.6548514573863076,
+      "Precision@10": 0.5,
+      "Precision@25": 0.64,
+      "Precision@50": 0.6,
+      "Precision@100": 0.61,
+      "Recall@0.5": 0.395300501844126,
+      "F1@0.5": 0.49755517503805174
+    },
+    {
+      "model": "historical_rule_baseline",
+      "ROC_AUC": 0.537934830213759,
+      "PR_AUC": 0.6853169426274246,
+      "Precision@10": 0.8,
+      "Precision@25": 0.6,
+      "Precision@50": 0.58,
+      "Precision@100": 0.58,
+      "Recall@0.5": NaN,
+      "F1@0.5": NaN
+    }
+  ],
+  "threshold_sensitivity": [
+    {
+      "decline_threshold": 0.1,
+      "test_base_rate": 0.7028202982723827,
+      "Precision@50": 0.9,
+      "Precision@100": 0.86
+    },
+    {
+      "decline_threshold": 0.2,
+      "test_base_rate": 0.6512378796082099,
+      "Precision@50": 0.82,
+      "Precision@100": 0.8
+    },
+    {
+      "decline_threshold": 0.3,
+      "test_base_rate": 0.5923364669980804,
+      "Precision@50": 0.78,
+      "Precision@100": 0.75
+    }
+  ]
+}

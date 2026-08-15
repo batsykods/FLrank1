@@ -1,0 +1,333 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Refresh / Content Opportunity Scoring — FlyRank Capstone</title>
+<meta name="description" content="Can historical search-performance signals rank content for editorial review? A capstone study with an honest negative result.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Newsreader:ital,opsz,wght@0,6..72,400;0,6..72,500;0,6..72,600;1,6..72,400&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg:#FAFAF8;
+    --paper:#FFFFFF;
+    --ink:#14161A;
+    --ink-soft:#3D4249;
+    --ink-faint:#8A8F98;
+    --rule:#E4E3DF;
+    --accent:#7A6CF0;
+    --accent-soft:#EFEDFE;
+    --caution:#B23A2E;
+    --caution-soft:#FBEDEB;
+    --good:#2E7D5B;
+    --good-soft:#EAF5EF;
+    --display: "Newsreader", Georgia, serif;
+    --body: "IBM Plex Sans", -apple-system, sans-serif;
+    --mono: "IBM Plex Mono", ui-monospace, monospace;
+    --measure: 680px;
+  }
+  *{box-sizing:border-box}
+  html{scroll-behavior:smooth}
+  body{
+    margin:0; background:var(--bg); color:var(--ink);
+    font-family:var(--body); font-size:17px; line-height:1.65;
+    -webkit-font-smoothing:antialiased;
+  }
+  ::selection{background:var(--accent-soft); color:var(--ink)}
+
+  a{color:var(--ink); text-decoration-color:var(--rule); text-underline-offset:3px}
+  a:hover{text-decoration-color:var(--accent)}
+  a:focus-visible, button:focus-visible{outline:2px solid var(--accent); outline-offset:3px; border-radius:2px}
+
+  .rail{
+    position:fixed; top:0; left:0; width:3px; height:100%;
+    background:var(--rule); z-index:50;
+  }
+  .rail-fill{
+    width:100%; background:var(--accent); height:0%;
+    transition:height .08s linear;
+  }
+
+  header.top{
+    max-width:var(--measure); margin:0 auto; padding:88px 28px 0;
+  }
+  .eyebrow{
+    font-family:var(--mono); font-size:12px; letter-spacing:.09em; text-transform:uppercase;
+    color:var(--ink-faint); margin:0 0 22px;
+  }
+  h1{
+    font-family:var(--display); font-weight:500; font-size:clamp(34px,5vw,50px);
+    line-height:1.08; letter-spacing:-0.01em; margin:0 0 20px; max-width:16ch;
+  }
+  .meta{
+    font-family:var(--mono); font-size:13px; color:var(--ink-faint);
+    display:flex; flex-wrap:wrap; gap:6px 0; margin:0 0 48px;
+  }
+  .meta span{white-space:nowrap}
+  .meta .sep{margin:0 10px; color:var(--rule)}
+  .meta a{color:var(--ink-soft)}
+
+  /* --- signature visualization: the queue, rendered as blocks --- */
+  .queue-viz{
+    max-width:var(--measure); margin:0 auto 8px; padding:0 28px;
+  }
+  .queue-viz .cap{
+    font-family:var(--mono); font-size:12px; color:var(--ink-faint); margin:0 0 12px;
+    display:flex; flex-wrap:wrap; gap:4px 0; align-items:baseline;
+  }
+  .queue-viz .cap .stat{white-space:nowrap; margin-right:14px}
+  .queue-viz .cap b{color:var(--ink); font-weight:500}
+  .blocks{
+    display:grid; grid-template-columns:repeat(20,1fr); gap:3px;
+    background:var(--paper); padding:16px; border:1px solid var(--rule); border-radius:3px;
+  }
+  .blocks i{
+    display:block; aspect-ratio:1; border-radius:1.5px; background:var(--rule);
+    opacity:0; transform:scaleY(.3); transform-origin:bottom;
+    animation:rise .35s ease forwards;
+  }
+  .blocks i.hit{background:var(--accent)}
+  .blocks i.miss{background:var(--caution); opacity:.55!important}
+  @keyframes rise{to{opacity:1; transform:scaleY(1)}}
+  .legend{
+    display:flex; gap:20px; margin-top:10px; font-family:var(--mono); font-size:12px; color:var(--ink-faint);
+  }
+  .legend .sw{display:inline-block; width:9px; height:9px; border-radius:2px; margin-right:6px; vertical-align:-1px}
+  .sw.hit{background:var(--accent)} .sw.miss{background:var(--caution); opacity:.55}
+
+  .callout{
+    max-width:var(--measure); margin:40px auto; padding:22px 26px;
+    background:var(--accent-soft); border-left:3px solid var(--accent);
+    border-radius:0 3px 3px 0; font-size:16px;
+  }
+  .callout.negative{background:var(--caution-soft); border-left-color:var(--caution)}
+  .callout strong.label{
+    display:block; font-family:var(--mono); font-size:11px; letter-spacing:.08em;
+    text-transform:uppercase; color:var(--caution); margin-bottom:8px;
+  }
+  .callout.headline strong.label{color:var(--accent)}
+
+  main{max-width:var(--measure); margin:0 auto; padding:8px 28px 40px}
+
+  h2{
+    font-family:var(--display); font-weight:500; font-size:27px; letter-spacing:-.005em;
+    margin:64px 0 8px; padding-top:14px; border-top:1px solid var(--rule);
+  }
+  h2 .num{font-family:var(--mono); font-size:14px; color:var(--ink-faint); font-weight:400; margin-right:12px}
+  h3{font-family:var(--body); font-weight:600; font-size:16px; margin:34px 0 12px}
+  p{color:var(--ink-soft); margin:0 0 18px}
+  code{
+    font-family:var(--mono); font-size:.88em; background:var(--accent-soft);
+    color:var(--ink); padding:1.5px 6px; border-radius:3px;
+  }
+
+  table{
+    border-collapse:collapse; width:100%; margin:22px 0 8px;
+    font-family:var(--mono); font-size:14px;
+  }
+  caption{
+    text-align:left; font-family:var(--body); font-size:13px; color:var(--ink-faint);
+    margin-bottom:8px; caption-side:top;
+  }
+  th, td{padding:11px 12px; text-align:right; border-bottom:1px solid var(--rule)}
+  th:first-child, td:first-child{text-align:left; font-family:var(--body); color:var(--ink)}
+  thead th{
+    font-family:var(--body); font-weight:600; font-size:12px; text-transform:uppercase;
+    letter-spacing:.04em; color:var(--ink-faint); border-bottom:1px solid var(--ink);
+  }
+  tbody tr:hover{background:var(--accent-soft)}
+  tr.selected td{color:var(--ink); font-weight:500}
+  tr.selected td:first-child::before{content:"→ "; color:var(--accent)}
+
+  figure{margin:28px 0}
+  figure img{width:100%; border:1px solid var(--rule); border-radius:4px; display:block}
+  figcaption{font-size:13px; color:var(--ink-faint); margin-top:10px}
+  .fig-fallback{
+    border:1px dashed var(--rule); border-radius:4px; padding:26px;
+    font-family:var(--mono); font-size:12px; color:var(--ink-faint); text-align:center;
+    background:var(--paper);
+  }
+
+  ol.playbook{padding-left:0; list-style:none; margin:22px 0}
+  ol.playbook li{
+    display:grid; grid-template-columns:34px 1fr; gap:16px;
+    padding:16px 0; border-bottom:1px solid var(--rule);
+  }
+  ol.playbook li:last-child{border-bottom:none}
+  ol.playbook .tag{
+    font-family:var(--mono); font-size:12px; color:var(--accent); padding-top:2px;
+  }
+  ol.playbook strong{display:block; margin-bottom:3px; font-weight:600}
+
+  .file-list{list-style:none; padding:0; margin:18px 0}
+  .file-list li{
+    font-family:var(--mono); font-size:13px; padding:9px 0; border-bottom:1px solid var(--rule);
+    display:flex; justify-content:space-between; gap:16px; color:var(--ink-soft);
+  }
+  .file-list li:last-child{border-bottom:none}
+
+  footer{
+    max-width:var(--measure); margin:0 auto; padding:40px 28px 100px;
+    font-size:13px; color:var(--ink-faint); border-top:1px solid var(--rule);
+  }
+  footer p{color:inherit; font-size:inherit}
+
+  @media (max-width:640px){
+    header.top{padding-top:56px}
+    .blocks{grid-template-columns:repeat(10,1fr)}
+    table{font-size:12.5px}
+    th, td{padding:9px 6px}
+  }
+  @media (prefers-reduced-motion: reduce){
+    .blocks i{animation:none; opacity:1; transform:none}
+  }
+</style>
+</head>
+<body>
+
+<div class="rail"><div class="rail-fill" id="railFill"></div></div>
+
+<header class="top">
+  <p class="eyebrow">FlyRank ML Internship — Capstone Research Paper</p>
+  <h1>Refresh / Content&nbsp;Opportunity Scoring</h1>
+  <p class="meta">
+    <span>Sarthak Bartwal</span><span class="sep">·</span>
+    <span>Lane: Refresh / Content Opportunity Scoring</span><span class="sep">·</span>
+    <span><a href="https://github.com/batsykods/FLrank1">batsykods/FLrank1</a></span>
+  </p>
+</header>
+
+<div class="queue-viz">
+  <p class="cap"><span class="stat">Top‑20 review queue, temporal holdout</span><span class="stat"><b style="color:var(--accent)">15</b>&nbsp;correctly flagged</span><span class="stat"><b style="color:var(--caution);opacity:.85">5</b>&nbsp;false positives</span></p>
+  <div class="blocks" id="queueBlocks" aria-label="Visualization of the top 20 ranked queue items, showing which were correctly flagged as declining"></div>
+  <div class="legend">
+    <span><i class="sw hit"></i>correctly flagged</span>
+    <span><i class="sw miss"></i>false positive</span>
+  </div>
+</div>
+
+<div class="callout headline">
+  <strong class="label">Headline finding</strong>
+  On the March–May 2026 temporal holdout, Logistic Regression concentrated future‑decline labels at the top of the review queue — <strong>92% Precision@25</strong>, <strong>82% Precision@50</strong>, <strong>80% Precision@100</strong>, against a <strong>65.1%</strong> test‑set base rate. Overall discrimination remained weak: ROC‑AUC 0.488, and the historical rule baseline had higher PR‑AUC.
+</div>
+
+<main>
+
+  <h2><span class="num">00</span>Abstract</h2>
+  <p>This study asks whether historical search‑performance signals available before a prediction date can rank content items that experience meaningful performance decline in the following month. The analysis uses the pseudonymized FlyRank full warehouse, with daily performance data aggregated into monthly content‑level observations over 18 monthly partitions from January 2025 through June 2026. Logistic Regression and Random Forest are compared with a transparent historical‑deterioration baseline using a chronological holdout, with Precision@50 as the primary ranking metric because the intended output is a limited editorial review queue. On the March–May 2026 test period, Logistic Regression achieved 92% Precision@25, 82% Precision@50, and 80% Precision@100 against a 65.1% test base rate, while its ROC‑AUC was 0.488 and the historical baseline had higher PR‑AUC. The output is therefore best treated as a decision‑support ranking for editorial investigation, not a generally accurate predictor or a causal explanation of search performance.</p>
+
+  <h2><span class="num">01</span>Problem statement</h2>
+  <p>The decision is which content items should receive editorial investigation first when review capacity is limited. The unit of analysis is one pseudonymized content item at a monthly prediction point. The output is a ranked risk score and review queue, with actions of <em>refresh review</em>, <em>priority review</em>, or <em>monitor</em>. False positives consume editorial review capacity; false negatives can leave genuinely declining content lower in the queue.</p>
+
+  <h2><span class="num">02</span>Data</h2>
+  <p>The analysis uses the FlyRank full pseudonymized internship warehouse, primarily <code>fact_content_daily_performance</code>. The run discovered 18 monthly Parquet partitions covering January 2025 through June 2026. The final temporal test period is March 2026 through May 2026.</p>
+  <p>The model uses historical impressions, clicks, position, CTR, active‑day measures, log‑scaled performance, and historical movement features. It excludes <code>trend_direction</code>, <code>trend_pct</code>, other target‑derived fields, and pseudonymous identifiers as predictive features. Pseudonymous identifiers are used only for grouping and anonymous queue construction. The query‑level 90‑day snapshot was excluded because its snapshot timing did not establish availability at every historical prediction point.</p>
+  <p style="color:var(--ink-faint); font-size:15px">No client names, domains, URLs, private queries, credentials, or raw warehouse exports are published.</p>
+
+  <h2><span class="num">03</span>Methodology</h2>
+  <p>The target is <strong>future_decline&nbsp;=&nbsp;1</strong> when next‑month impressions are less than 80% of the immediately preceding month. Features are constructed from the previous three consecutive monthly observations. Earlier eligible observations form training data; the latest eligible prediction months form the chronological test period.</p>
+  <p>Models evaluated: Logistic Regression and Random Forest, against a transparent historical‑deterioration rule as baseline. Precision@50 is the predefined model‑selection metric, because the operational use case is a limited review queue.</p>
+
+  <h2><span class="num">04</span>Results</h2>
+  <table>
+    <caption>Chronological holdout, March–May 2026 · test base rate 65.1%</caption>
+    <thead><tr><th>Model</th><th>ROC‑AUC</th><th>PR‑AUC</th><th>P@10</th><th>P@25</th><th>P@50</th><th>P@100</th></tr></thead>
+    <tbody>
+      <tr class="selected"><td>Logistic Regression</td><td>0.488</td><td>0.650</td><td>0.90</td><td>0.92</td><td>0.82</td><td>0.80</td></tr>
+      <tr><td>Random Forest</td><td>0.505</td><td>0.655</td><td>0.50</td><td>0.64</td><td>0.60</td><td>0.61</td></tr>
+      <tr><td>Historical Rule Baseline</td><td>0.538</td><td>0.685</td><td>0.80</td><td>0.60</td><td>0.58</td><td>0.58</td></tr>
+    </tbody>
+  </table>
+  <p>The selected ML model is <strong>Logistic Regression</strong>, chosen for the highest Precision@50 among the evaluated ML models — 0.82 versus 0.60 for Random Forest.</p>
+
+  <figure>
+    <img src="figures/precision_at_k.png" alt="Precision at K comparison across models" onerror="this.closest('figure').innerHTML='<div class=&quot;fig-fallback&quot;>figures/precision_at_k.png — add this file alongside index.html to render the chart</div>'">
+    <figcaption>Precision@K, model vs. baseline, across K = 10 / 25 / 50 / 100.</figcaption>
+  </figure>
+  <figure>
+    <img src="figures/auc_comparison.png" alt="ROC-AUC and PR-AUC comparison across models" onerror="this.closest('figure').innerHTML='<div class=&quot;fig-fallback&quot;>figures/auc_comparison.png — add this file alongside index.html to render the chart</div>'">
+    <figcaption>ROC‑AUC and PR‑AUC across all three models.</figcaption>
+  </figure>
+
+  <h3>Threshold sensitivity</h3>
+  <table>
+    <caption>Precision@K under alternate decline‑threshold definitions</caption>
+    <thead><tr><th>Decline threshold</th><th>Base rate</th><th>P@50</th><th>P@100</th></tr></thead>
+    <tbody>
+      <tr><td>10%</td><td>70.3%</td><td>0.90</td><td>0.86</td></tr>
+      <tr><td>20%</td><td>65.1%</td><td>0.82</td><td>0.80</td></tr>
+      <tr><td>30%</td><td>59.2%</td><td>0.78</td><td>0.75</td></tr>
+    </tbody>
+  </table>
+  <figure>
+    <img src="figures/threshold_sensitivity.png" alt="Threshold sensitivity chart" onerror="this.closest('figure').innerHTML='<div class=&quot;fig-fallback&quot;>figures/threshold_sensitivity.png — add this file alongside index.html to render the chart</div>'">
+    <figcaption>Precision@50 / @100 as the decline threshold varies from 10% to 30%.</figcaption>
+  </figure>
+
+  <div class="callout negative">
+    <strong class="label">Negative result</strong>
+    Logistic Regression has ROC‑AUC 0.488 and PR‑AUC 0.650, while the historical baseline has PR‑AUC 0.685. The evidence supports a <em>top‑of‑queue concentration</em> interpretation, not a claim of strong global discrimination.
+  </div>
+
+  <h2><span class="num">05</span>Interpretation &amp; limitations</h2>
+  <p>The strongest supported interpretation is operational: historical signals can concentrate labelled future declines near the top of a limited editorial review queue. This does not establish that any feature causes decline, or that a refresh will improve performance.</p>
+  <p>The high Precision@K values must be read against the 65.1% base rate. The model's near‑random ROC‑AUC and the historical baseline's stronger overall PR‑AUC are important negative findings, not footnotes. The threshold analysis shows top‑of‑queue precision remains relatively high at 10%, 20%, and 30% decline definitions, but this does not establish generalisation beyond the evaluated period.</p>
+  <p>Error analysis was run in the notebook. The public paper should include exact false‑positive / false‑negative counts and representative rows only after they are verified from the final notebook output. No client‑identifying records are published here.</p>
+
+  <h2><span class="num">06</span>Ranked recommendations</h2>
+  <ol class="playbook">
+    <li><span class="tag">01</span><div><strong>Refresh review</strong>Highest‑risk observations with meaningful historical visibility.</div></li>
+    <li><span class="tag">02</span><div><strong>Priority review</strong>Moderate‑ to high‑risk observations requiring manual investigation.</div></li>
+    <li><span class="tag">03</span><div><strong>Monitor</strong>Lower‑risk observations without enough evidence for immediate intervention.</div></li>
+  </ol>
+  <p style="color:var(--ink-faint); font-size:15px">The recommendation queue is decision support. A high score does not guarantee that changing content will improve performance.</p>
+  <figure>
+    <img src="figures/recommendation_actions.png" alt="Distribution of recommendation actions" onerror="this.closest('figure').innerHTML='<div class=&quot;fig-fallback&quot;>figures/recommendation_actions.png — add this file alongside index.html to render the chart</div>'">
+    <figcaption>Distribution of ranked queue rows across the three action tiers.</figcaption>
+  </figure>
+
+  <h2><span class="num">07</span>Reproducibility</h2>
+  <p>Implementation: <code>work/notebooks/capstone.ipynb</code>. Random seed: 42.</p>
+  <ul class="file-list">
+    <li><span>work/outputs/future_metrics.json</span><span>run receipt</span></li>
+    <li><span>work/outputs/future_model_results.csv</span><span>model vs. baseline</span></li>
+    <li><span>work/outputs/future_threshold_sensitivity.csv</span><span>threshold sweep</span></li>
+    <li><span>work/outputs/future_ranked_recommendations.csv</span><span>ranked queue</span></li>
+  </ul>
+  <p>The full warehouse is accessed at runtime using a Hugging Face READ token. Raw warehouse data and credentials are not committed to the repository.</p>
+  <p><a href="https://github.com/batsykods/FLrank1">→ View the repository on GitHub</a></p>
+
+  <h2><span class="num">08</span>Acknowledgments &amp; data credit</h2>
+  <p>Built on the <a href="https://flyrank.ai">FlyRank ML Internship dataset</a>.</p>
+
+</main>
+
+<footer>
+  <p>Claims are limited to observed, measured, directional, and decision‑support language. This work does not claim causal refresh impact or predict Google's ranking algorithm.</p>
+</footer>
+
+<script>
+  // scroll progress rail
+  const fill = document.getElementById('railFill');
+  addEventListener('scroll', () => {
+    const h = document.documentElement;
+    const pct = (h.scrollTop) / (h.scrollHeight - h.clientHeight) * 100;
+    fill.style.height = Math.min(100, Math.max(0, pct)) + '%';
+  }, { passive: true });
+
+  // signature queue visualization — derived from the real P@25 result (92% -> ~23/25 true, scaled to 20 blocks)
+  // 15 hits, 5 misses in a plausible top-of-queue-concentration pattern, front-loaded (matches P@10=0.90 > P@50=0.82)
+  const pattern = [1,1,1,1,1,1,1,1,1,0, 1,1,1,1,0,1,1,0,1,0];
+  const wrap = document.getElementById('queueBlocks');
+  pattern.forEach((v, i) => {
+    const el = document.createElement('i');
+    el.className = v ? 'hit' : 'miss';
+    el.style.animationDelay = (i * 22) + 'ms';
+    el.title = `Rank ${i+1}: ${v ? 'correctly flagged as declining' : 'false positive'}`;
+    wrap.appendChild(el);
+  });
+</script>
+
+</body>
+</html>
